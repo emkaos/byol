@@ -4,31 +4,70 @@
 #include "mpc.h"
 
 // Value type
-enum { LVAL_NUM, LVAL_ERR };
+enum { LVAL_NUM, LVAL_ERR, LVAL_SYM, LVAL_SEXPR };
 // Error types
 enum { LERR_DIV_ZERO, LERR_BAD_OP, LERR_BAD_NUM };
 
-typedef struct {
+typedef struct lval {
 	int type;
 	double num;
-	int err;
+	char* err;
+	char* sym;
+	int count; //lval count
+	struct lval** cell;
 } lval;
 
 // create a lval number
-lval lval_num(double x) {
-	lval v;
-	v.type = LVAL_NUM;
-	v.num = x;
+lval* lval_num(double x) {
+	lval* v = malloc(sizeof(lval));
+	v->type = LVAL_NUM;
+	v->num = x;
 	return v;
 }
 
 // create an lval error
-lval lval_err(int x) {
-	lval v;
-	v.type = LVAL_ERR;
-	v.err = x;
+lval lval_err(char* m) {
+	lval v = maloc(sizeof(lval));
+	v->type = LVAL_ERR;
+	v->err = malloc(strlen(m) + 1);
+	strcpy(v->err, m);
 	return v;
 }
+
+// create a lval symbol
+lval lval_sym(char* s) {
+	lval v = maloc(sizeof(lval));
+	v->type = LVAL_SYM;
+	v->sym = malloc(strlen(m) + 1);
+	strcpy(v->sym, s);
+	return v;
+}
+
+// create a lval sym expression
+lval lval_sexpr() {
+	lval v = maloc(sizeof(lval));
+	v->type = LVAL_SEXPR;
+	v-> count = 0;
+	v-> cell = NULL;
+	return v;
+}
+
+lval_del(lval* v) {
+	switch (v->type) {
+		case LVAL_NUM: break;
+		case LVAL_ERR: free(v->err); break;
+		case LVAL_SYM: free(v->sym); break;
+		case LVAL_SEXPR:
+			for (int i=0;i < v->count; i++) {
+				lval_del(v->cell[i]);
+			}
+			free(v->cell);
+			break;
+	}
+	free(v);
+}
+
+
 
 void lval_print(lval v) {
 	switch(v.type) {
@@ -97,10 +136,12 @@ int main(int argc, char** argv) {
 	mpc_parser_t* Operator = mpc_new("operator");
 	mpc_parser_t* Expression = mpc_new("expression");
 	mpc_parser_t* Lispy = mpc_new("lispy");
+	mpc_parser_t* Sexpression = mpc_new("sexpression");
 
 	mpca_lang(MPCA_LANG_DEFAULT, "\
 			number		: /-?[0-9]+(\\.[0-9]+)?/ ;\
 			operator	: '+' | '-' | '*' | '/'  ;\
+			sexpression : '(' <expression>* ')' ;\
 			expression	: <number> | '(' <operator> <expression>+ ')';\
 			lispy		: /^/ <operator> <expression>+ /$/ ;\
 			", 
@@ -127,6 +168,6 @@ int main(int argc, char** argv) {
 
 		free(input);
 	}
-	mpc_cleanup(4, Number, Operator, Expression, Lispy);
+	mpc_cleanup(4, Number, Operator, Expression, Lispy, Sexpression);
 	return 0;
 }
