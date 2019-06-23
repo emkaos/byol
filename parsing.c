@@ -115,7 +115,6 @@ void lval_expr_print(lval* v, char open, char close) {
 }
 
 void lval_print(lval* v) {
-	printf("%d", v->type); return;
 	switch(v->type) {
 		case LVAL_NUM: printf("%f", v->num); break;
 		case LVAL_ERR: printf("Error: %s", v->err); break;
@@ -128,19 +127,19 @@ void lval_println(lval* v) { lval_print(v); putchar('\n'); }
 
 int main(int argc, char** argv) {
 	mpc_parser_t* Number = mpc_new("number");
-	mpc_parser_t* Operator = mpc_new("operator");
+	mpc_parser_t* Symbol = mpc_new("symbol");
 	mpc_parser_t* Expression = mpc_new("expression");
 	mpc_parser_t* Lispy = mpc_new("lispy");
 	mpc_parser_t* Sexpression = mpc_new("sexpression");
 
 	mpca_lang(MPCA_LANG_DEFAULT, "\
 			number		: /-?[0-9]+(\\.[0-9]+)?/ ;\
-			operator	: '+' | '-' | '*' | '/'  ;\
+			symbol   	: '+' | '-' | '*' | '/'  ;\
 			sexpression : '(' <expression>* ')' ;\
-			expression	: <number> | '(' <operator> <expression>+ ')';\
-			lispy		: /^/ <operator> <expression>+ /$/ ;\
+			expression	: <number> | <symbol> | <sexpression> ;\
+			lispy		: /^/ <expression>+ /$/ ;\
 			", 
-			Number, Operator, Expression, Lispy);
+			Number, Symbol, Sexpression, Expression, Lispy);
 
 	puts("Lispy version 0.0.0.0.4");
 	puts("Press Ctrl-C to exit");
@@ -164,6 +163,6 @@ int main(int argc, char** argv) {
 
 		free(input);
 	}
-	mpc_cleanup(4, Number, Operator, Expression, Lispy, Sexpression);
+	mpc_cleanup(4, Number, Symbol, Expression, Lispy, Sexpression);
 	return 0;
 }
